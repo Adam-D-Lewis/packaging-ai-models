@@ -72,6 +72,77 @@ echo $QWEN3_CODER_NEXT_MODEL_DIR
 # -> /path/to/env/share/qwen3-coder-next/models
 ```
 
+## Testing
+
+### 1. Validate the build infrastructure (no large download)
+
+Start with the whisper tiny model (~31 MB) to confirm everything works end-to-end:
+
+```bash
+pixi run build-test
+```
+
+This downloads the whisper.cpp tiny English model, packages it, and runs the built-in tests
+(file existence + env var check). You should see `all tests passed!` at the end.
+
+### 2. Build a Qwen model package
+
+Once the test recipe succeeds, build one of the real model packages:
+
+```bash
+# Smaller model first (~21.2 GB download)
+pixi run build-qwen35
+
+# Or the larger coding model (~48.5 GB download)
+pixi run build-qwen-coder
+```
+
+The output `.conda` packages are written to `output/noarch/`.
+
+### 3. Install and verify the package
+
+You can install the built package into a pixi environment to verify it works:
+
+```bash
+# Create a test environment and install the local package
+pixi add --pypi ./output/noarch/qwen3.5-35b-a3b-gguf-1.0.0-q4_k_m.conda
+
+# Or install directly with rattler/conda
+conda install --use-local output/noarch/qwen3.5-35b-a3b-gguf-1.0.0-q4_k_m.conda
+```
+
+After installation, verify the environment variable is set and the model file exists:
+
+```bash
+echo $QWEN35_35B_A3B_MODEL_DIR
+ls -lh $QWEN35_35B_A3B_MODEL_DIR/
+```
+
+### 4. Test with an inference engine
+
+Use the packaged model with llama.cpp or any GGUF-compatible engine:
+
+```bash
+llama-cli -m $QWEN35_35B_A3B_MODEL_DIR/Qwen3.5-35B-A3B-Q4_K_M.gguf -p "Hello, world"
+```
+
+## Project Structure
+
+```
+packaging-ai-models/
+  pixi.toml                              # Pixi workspace with build tasks
+  recipes/
+    whisper-tiny-test/
+      recipe.yaml                        # Small test recipe (~31 MB model)
+    qwen3.5-35b-a3b-gguf/
+      recipe.yaml                        # Qwen3.5-35B-A3B recipe
+      variants.yaml                      # Quantization variants (Q4_K_M default)
+    qwen3-coder-next-gguf/
+      recipe.yaml                        # Qwen3-Coder-Next recipe
+      variants.yaml                      # Quantization variants (Q4_K_M default)
+  output/                                # Built .conda packages (gitignored)
+```
+
 ## Benefits of Conda Packaging for Models
 
 - **Versioning**: Track model versions alongside software versions
