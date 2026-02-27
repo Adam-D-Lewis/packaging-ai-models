@@ -1,0 +1,14 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# Build output
+output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Downloaded model files (if testing locally)
+*.gguf
+*.bin

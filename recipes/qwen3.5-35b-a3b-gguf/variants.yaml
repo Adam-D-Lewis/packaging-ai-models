@@ -1,0 +1,13 @@
+# Available quantization variants for Qwen3.5-35B-A3B GGUF
+# Sizes from unsloth/Qwen3.5-35B-A3B-GGUF (single-file GGUFs):
+#   Q2_K:     ~12.9 GB
+#   Q3_K_S:   ~15.2 GB
+#   IQ4_XS:   ~18.7 GB
+#   Q4_K_S:   ~19.9 GB
+#   Q4_K_M:   ~21.2 GB  (recommended balance of size/quality)
+#   Q5_K_S:   ~24.0 GB
+#   Q5_K_M:   ~24.8 GB
+#   Q6_K:     ~28.6 GB
+#   Q8_0:     ~36.9 GB
+quant_type:
+  - Q4_K_M

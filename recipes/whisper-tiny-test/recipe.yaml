@@ -1,0 +1,29 @@
+package:
+  name: whisper.cpp-model-ggml-tiny-en-q5_1
+  version: 1.0.0
+
+source:
+  url: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin?download=true
+  file_name: ggml-tiny.en-q5_1.bin
+
+build:
+  noarch: generic
+  script: |
+    mkdir -p $PREFIX/share/whisper.cpp/models
+    mv ggml-tiny.en-q5_1.bin $PREFIX/share/whisper.cpp/models/
+
+    # Add environment variable pointing to model directory
+    mkdir -p "${PREFIX}/etc/conda/env_vars.d"
+    echo "{\"WHISPER_MODEL_DIR\": \"\$CONDA_PREFIX/share/whisper.cpp/models\"}" > "${PREFIX}/etc/conda/env_vars.d/${PKG_NAME}.json"
+
+tests:
+  - package_contents:
+      files:
+        exists:
+          - share/whisper.cpp/models/ggml-tiny.en-q5_1.bin
+
+about:
+  homepage: https://huggingface.co/ggerganov/whisper.cpp/
+  license: MIT
+  summary: A whisper.cpp tiny English model (q5_1 quantization) repackaged as a conda package
+  repository: https://huggingface.co/ggerganov/whisper.cpp/

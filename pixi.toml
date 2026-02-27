@@ -1,0 +1,22 @@
+[workspace]
+authors = ["Claude <noreply@anthropic.com>"]
+channels = ["conda-forge"]
+name = "packaging-ai-models"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+# Build the small whisper.cpp test model (~31 MB) to validate the approach
+build-test = "rattler-build build -r recipes/whisper-tiny-test/recipe.yaml --output-dir output"
+
+# Build Qwen3.5-35B-A3B GGUF (Q4_K_M ~21.2 GB by default, see variants.yaml for options)
+build-qwen35 = "rattler-build build -r recipes/qwen3.5-35b-a3b-gguf/recipe.yaml -m recipes/qwen3.5-35b-a3b-gguf/variants.yaml --output-dir output"
+
+# Build Qwen3-Coder-Next GGUF (Q4_K_M ~48.5 GB by default, see variants.yaml for options)
+build-qwen-coder = "rattler-build build -r recipes/qwen3-coder-next-gguf/recipe.yaml -m recipes/qwen3-coder-next-gguf/variants.yaml --output-dir output"
+
+# Build all models
+build-all = { depends-on = ["build-qwen35", "build-qwen-coder"] }
+
+[dependencies]
+rattler-build = ">=0.35"

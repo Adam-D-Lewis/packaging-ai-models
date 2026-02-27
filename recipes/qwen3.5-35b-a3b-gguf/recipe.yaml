@@ -1,0 +1,43 @@
+package:
+  name: qwen3.5-35b-a3b-gguf
+  version: "1.0.0"
+
+source:
+  url: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF/resolve/main/Qwen3.5-35B-A3B-${{ quant_type }}.gguf?download=true
+  file_name: Qwen3.5-35B-A3B-${{ quant_type }}.gguf
+
+build:
+  noarch: generic
+  number: 0
+  string: ${{ quant_type | lower | replace('.', '_') | replace('-', '_') }}
+  script: |
+    # Create model directory
+    mkdir -p $PREFIX/share/qwen3.5-35b-a3b/models
+
+    # Move model file to package prefix
+    mv Qwen3.5-35B-A3B-${{ quant_type }}.gguf $PREFIX/share/qwen3.5-35b-a3b/models/
+
+    # Set environment variable pointing to the model directory
+    mkdir -p "${PREFIX}/etc/conda/env_vars.d"
+    echo "{\"QWEN35_35B_A3B_MODEL_DIR\": \"\$CONDA_PREFIX/share/qwen3.5-35b-a3b/models\"}" > "${PREFIX}/etc/conda/env_vars.d/${PKG_NAME}.json"
+
+tests:
+  - package_contents:
+      files:
+        exists:
+          - share/qwen3.5-35b-a3b/models/Qwen3.5-35B-A3B-${{ quant_type }}.gguf
+  - script: test "$QWEN35_35B_A3B_MODEL_DIR" = "$PREFIX/share/qwen3.5-35b-a3b/models"
+
+about:
+  homepage: https://huggingface.co/Qwen/Qwen3.5-35B-A3B
+  license: Apache-2.0
+  summary: >
+    Qwen3.5-35B-A3B GGUF model (${{ quant_type }} quantization).
+    35B total params, 3B active (MoE). Supports 1M+ context length.
+    Packaged from unsloth/Qwen3.5-35B-A3B-GGUF.
+  description: >
+    Qwen 3.5 integrates Gated Delta Networks with sparse Mixture-of-Experts (MoE).
+    The flagship Qwen3.5-35B-A3B can exceed a 1 million token context length on
+    consumer-grade GPUs with 32GB of VRAM. This package contains the ${{ quant_type }}
+    GGUF quantization from unsloth, which uses Dynamic 2.0 for superior accuracy.
+  repository: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF

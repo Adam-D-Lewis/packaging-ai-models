@@ -1,0 +1,11 @@
+# Available quantization variants for Qwen3-Coder-Next GGUF
+# Sizes from unsloth/Qwen3-Coder-Next-GGUF (single-file GGUFs):
+#   Q2_K:     ~30.0 GB
+#   Q3_K_S:   ~35.5 GB
+#   Q4_K_S:   ~45.0 GB  (estimated)
+#   Q4_K_M:   ~48.5 GB  (recommended for quality, needs >45GB RAM/VRAM)
+#   Q5_K_M:   ~56.0 GB  (estimated)
+#   Q6_K:     ~65.0 GB  (estimated)
+#   Q8_0:     ~84.0 GB  (estimated)
+quant_type:
+  - Q4_K_M

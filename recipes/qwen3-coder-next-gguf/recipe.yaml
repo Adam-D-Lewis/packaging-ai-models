@@ -1,0 +1,45 @@
+package:
+  name: qwen3-coder-next-gguf
+  version: "1.0.0"
+
+source:
+  url: https://huggingface.co/unsloth/Qwen3-Coder-Next-GGUF/resolve/main/Qwen3-Coder-Next-${{ quant_type }}.gguf?download=true
+  file_name: Qwen3-Coder-Next-${{ quant_type }}.gguf
+
+build:
+  noarch: generic
+  number: 0
+  string: ${{ quant_type | lower | replace('.', '_') | replace('-', '_') }}
+  script: |
+    # Create model directory
+    mkdir -p $PREFIX/share/qwen3-coder-next/models
+
+    # Move model file to package prefix
+    mv Qwen3-Coder-Next-${{ quant_type }}.gguf $PREFIX/share/qwen3-coder-next/models/
+
+    # Set environment variable pointing to the model directory
+    mkdir -p "${PREFIX}/etc/conda/env_vars.d"
+    echo "{\"QWEN3_CODER_NEXT_MODEL_DIR\": \"\$CONDA_PREFIX/share/qwen3-coder-next/models\"}" > "${PREFIX}/etc/conda/env_vars.d/${PKG_NAME}.json"
+
+tests:
+  - package_contents:
+      files:
+        exists:
+          - share/qwen3-coder-next/models/Qwen3-Coder-Next-${{ quant_type }}.gguf
+  - script: test "$QWEN3_CODER_NEXT_MODEL_DIR" = "$PREFIX/share/qwen3-coder-next/models"
+
+about:
+  homepage: https://huggingface.co/Qwen/Qwen3-Coder-Next-GGUF
+  license: Apache-2.0
+  summary: >
+    Qwen3-Coder-Next GGUF model (${{ quant_type }} quantization).
+    80B total params, 3B active (MoE). Coding agent model with 256k context.
+    Packaged from unsloth/Qwen3-Coder-Next-GGUF.
+  description: >
+    Qwen3-Coder-Next is an open-weight model designed for coding agents and local
+    development. With only 3B activated parameters (80B total), it achieves
+    performance comparable to models with 10-20x more active parameters. Built on
+    Qwen3-Next-80B-A3B-Base with hybrid attention and MoE, it excels at long-horizon
+    reasoning, complex tool usage, and recovery from execution failures. 256k context
+    length enables integration with CLI/IDE platforms.
+  repository: https://huggingface.co/unsloth/Qwen3-Coder-Next-GGUF
