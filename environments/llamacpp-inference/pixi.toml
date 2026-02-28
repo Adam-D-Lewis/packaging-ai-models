@@ -1,0 +1,56 @@
+[workspace]
+name = "llamacpp-inference"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+version = "0.1.0"
+
+# ---------------------------------------------------------------------------
+# Dependencies — all from conda-forge
+# ---------------------------------------------------------------------------
+#
+# This provides a llama.cpp-based inference server as a pixi environment.
+# Best for single-user inference with GGUF models — native GGUF support
+# with optimized quantized matrix multiplication kernels.
+#
+# For multi-user serving with continuous batching, use vllm-inference instead.
+#
+# The only thing that must be on the host is the NVIDIA driver (for GPU).
+# llama.cpp also works on CPU-only machines (slower but functional).
+# ---------------------------------------------------------------------------
+
+[dependencies]
+python = "3.12.*"
+llama-cpp-python = ">=0.3"
+huggingface_hub = ">=0.20"
+
+# ---------------------------------------------------------------------------
+# Tasks
+# ---------------------------------------------------------------------------
+[tasks]
+
+# Serve a model with the OpenAI-compatible API.
+# All flags are configurable via environment variables — see serve.py.
+#
+# Default model: Qwen3-Coder-Next Q4_K_M GGUF (~48.5 GB, needs ~50 GB VRAM
+# for full GPU offload). llama.cpp is GGUF-native — no dequantization overhead.
+#
+# Single GPU (RTX PRO 6000 96 GB):
+#   pixi run serve
+#
+# qgpu2 staging (2x TITAN RTX 24 GB = 48 GB total):
+#   N_GPU_LAYERS=-1 pixi run serve
+#
+# CPU-only (slow, but works anywhere):
+#   N_GPU_LAYERS=0 pixi run serve
+#
+# Smaller model for testing:
+#   HF_REPO=Qwen/Qwen2.5-0.5B-Instruct-GGUF \
+#   HF_FILE="*q4_k_m.gguf" \
+#   pixi run serve
+serve = "python scripts/serve.py"
+
+# Quick smoke test: serve a tiny model (~400 MB download, runs on CPU).
+test-serve = { cmd = "python scripts/serve.py", env = { HF_REPO = "Qwen/Qwen2.5-0.5B-Instruct-GGUF", HF_FILE = "*q4_k_m.gguf", N_GPU_LAYERS = "0", MAX_MODEL_LEN = "2048" } }
+
+# Send a test chat completion to a running server.
+test-chat = "python scripts/test_chat.py"

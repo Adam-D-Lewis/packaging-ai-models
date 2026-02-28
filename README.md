@@ -126,66 +126,53 @@ Use the packaged model with llama.cpp or any GGUF-compatible engine:
 llama-cli -m $QWEN35_35B_A3B_MODEL_DIR/Qwen3.5-35B-A3B-Q4_K_M.gguf -p "Hello, world"
 ```
 
-## Inference Environment (model + llama.cpp + auto-tuning)
+## Inference Environments
 
-The `environments/qwen-coder-inference/` directory is a standalone pixi project
-that bundles the model with llama.cpp (via `llama-cpp-python`) and an
-auto-benchmarking script that finds the best settings for your hardware.
+Two pixi environments for serving models, each with trade-offs:
 
-### Setup
+| | `llamacpp-inference` | `vllm-inference` |
+|---|---|---|
+| **Best for** | Single-user, local dev | Multi-user team serving |
+| **Default model** | Qwen3-Coder-Next Q4_K_M GGUF | Intel INT4 AutoRound (safetensors) |
+| **Engine** | llama.cpp (GGUF-native) | vLLM (PagedAttention, continuous batching) |
+| **Multi-GPU** | Manual layer splitting | `--tensor-parallel-size 2` |
+| **CPU offloading** | Yes | No |
+| **Concurrency** | Fixed throughput / N users | Scales with load |
+
+Both serve an OpenAI-compatible API at `http://host:8000/v1/chat/completions`,
+so all coding agent frontends (Claude Code, Aider, etc.) work with either.
+
+### llama.cpp Inference (`environments/llamacpp-inference/`)
+
+GGUF-native inference with optimized quantized kernels. Downloads the model
+from HuggingFace on first run (cached for subsequent runs).
 
 ```bash
-cd environments/qwen-coder-inference
-
-# Edit pixi.toml to enable CUDA if you have a GPU:
-#   1. Uncomment the cuda-version line matching your driver
-#   2. Uncomment the extra-index-urls line for CUDA wheels
-
+cd environments/llamacpp-inference
 pixi install
-```
 
-### Auto-tune
-
-On first activation pixi will remind you to benchmark. Run it once — results
-are cached and loaded automatically on every future shell:
-
-```bash
-pixi run benchmark          # full sweep (~10-20 min depending on model size)
-pixi run benchmark-quick    # fewer configs (~5 min)
-```
-
-The benchmark sweeps GPU layer offloading, thread count, and batch size in
-stages, then saves the winning config to
-`~/.cache/qwen-coder-inference/benchmark-results.json`. On every subsequent
-`pixi shell` the activation script exports these as env vars
-(`LLAMA_N_GPU_LAYERS`, `LLAMA_N_THREADS`, `LLAMA_N_BATCH`) so all tools
-pick them up automatically.
-
-### Use
-
-```bash
-# Interactive chat (uses tuned settings automatically)
-pixi run chat
-
-# OpenAI-compatible API server
+# Default: Qwen3-Coder-Next Q4_K_M (~48.5 GB download, all layers on GPU)
 pixi run serve
-# Then: curl http://localhost:8000/v1/chat/completions ...
 
-# Or use the env vars directly with any GGUF tool
-llama-cli -m $QWEN3_CODER_NEXT_MODEL_DIR/*.gguf \
-  -ngl $LLAMA_N_GPU_LAYERS -t $LLAMA_N_THREADS -b $LLAMA_N_BATCH \
-  -p "Hello"
+# Smaller model for quick testing (~400 MB, runs on CPU)
+pixi run test-serve
+
+# Override model, GPU layers, context, etc.
+HF_REPO=unsloth/Qwen3-Coder-Next-GGUF \
+HF_FILE="*Q8_0.gguf" \
+N_GPU_LAYERS=-1 \
+MAX_MODEL_LEN=32768 \
+pixi run serve
+
+# Use a local GGUF file instead of downloading
+MODEL=/path/to/model.gguf pixi run serve
 ```
 
-### Pointing at a model
+There is also an advanced version at `environments/qwen-coder-inference/` with
+auto-benchmarking that sweeps GPU layers, threads, and batch size to find
+optimal settings for your hardware.
 
-The scripts look for a model in this order:
-1. `MODEL_PATH` env var (explicit path to a `.gguf` file)
-2. `QWEN3_CODER_NEXT_MODEL_DIR` / `QWEN35_35B_A3B_MODEL_DIR` env vars
-   (set automatically when a model conda package is installed)
-3. Fail with an error telling you what to set
-
-## vLLM Inference Environment (multi-user GPU serving)
+### vLLM Inference (`environments/vllm-inference/`) — multi-user GPU serving
 
 The `environments/vllm-inference/` directory is a standalone pixi project that
 replaces the `vllm/vllm-openai` Docker image with a pixi-managed environment.
@@ -289,18 +276,23 @@ packaging-ai-models/
       recipe.yaml                        # Qwen3-Coder-Next recipe
       variants.yaml                      # Quantization variants (Q4_K_M default)
   environments/
+    llamacpp-inference/
+      pixi.toml                          # llama.cpp inference (GGUF-native)
+      scripts/
+        serve.py                         # Downloads GGUF from HF, starts server
+        test_chat.py                     # Sends test request to running server
+    vllm-inference/
+      pixi.toml                          # vLLM inference (INT4/AWQ, multi-user)
+      scripts/
+        serve.py                         # Starts vLLM OpenAI-compatible server
+        test_chat.py                     # Sends test request to running server
     qwen-coder-inference/
-      pixi.toml                          # Inference env: llama.cpp + CUDA + auto-tune
+      pixi.toml                          # Advanced: llama.cpp + auto-benchmarking
       benchmark.py                       # Sweeps settings, saves optimal config
       scripts/
         activate.sh                      # Loads tuned settings on shell activation
         chat.py                          # Interactive chat using tuned settings
         serve.py                         # OpenAI-compatible API server
-    vllm-inference/
-      pixi.toml                          # vLLM env: replaces vllm/vllm-openai Docker
-      scripts/
-        serve.py                         # Starts vLLM OpenAI-compatible server
-        test_chat.py                     # Sends test request to running server
   output/                                # Built .conda packages (gitignored)
 ```
 
