@@ -1,0 +1,39 @@
+[workspace]
+name = "qwen-coder-inference"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[dependencies]
+python = ">=3.11"
+
+# CUDA runtime — adjust to match your driver (nvidia-smi → "CUDA Version: XX.Y")
+# Uncomment ONE of the following lines:
+# cuda-version = "12.4"   # most common with recent drivers
+# cuda-version = "12.6"
+# cuda-version = "11.8"   # older GPUs / drivers
+
+[pypi-dependencies]
+llama-cpp-python = ">=0.3"
+
+[pypi-options]
+# CPU-only by default. For GPU acceleration, uncomment the line matching your
+# CUDA version so pip pulls the pre-built CUDA wheel instead of the CPU one:
+# extra-index-urls = ["https://abetlen.github.io/llama-cpp-python/whl/cu124"]
+# extra-index-urls = ["https://abetlen.github.io/llama-cpp-python/whl/cu126"]
+
+[tasks]
+# Auto-detect optimal llama.cpp settings (threads, GPU layers, batch size).
+# Results are saved to ~/.cache/qwen-coder-inference/benchmark-results.json
+# and loaded automatically on every subsequent activation.
+benchmark       = "python benchmark.py"
+benchmark-quick = "python benchmark.py --quick"
+
+# Start an OpenAI-compatible API server with the tuned settings.
+serve = "python -c \"from scripts.serve import main; main()\""
+
+# One-shot interactive chat.
+chat = "python -c \"from scripts.chat import main; main()\""
+
+[activation]
+scripts = ["scripts/activate.sh"]

@@ -126,6 +126,65 @@ Use the packaged model with llama.cpp or any GGUF-compatible engine:
 llama-cli -m $QWEN35_35B_A3B_MODEL_DIR/Qwen3.5-35B-A3B-Q4_K_M.gguf -p "Hello, world"
 ```
 
+## Inference Environment (model + llama.cpp + auto-tuning)
+
+The `environments/qwen-coder-inference/` directory is a standalone pixi project
+that bundles the model with llama.cpp (via `llama-cpp-python`) and an
+auto-benchmarking script that finds the best settings for your hardware.
+
+### Setup
+
+```bash
+cd environments/qwen-coder-inference
+
+# Edit pixi.toml to enable CUDA if you have a GPU:
+#   1. Uncomment the cuda-version line matching your driver
+#   2. Uncomment the extra-index-urls line for CUDA wheels
+
+pixi install
+```
+
+### Auto-tune
+
+On first activation pixi will remind you to benchmark. Run it once — results
+are cached and loaded automatically on every future shell:
+
+```bash
+pixi run benchmark          # full sweep (~10-20 min depending on model size)
+pixi run benchmark-quick    # fewer configs (~5 min)
+```
+
+The benchmark sweeps GPU layer offloading, thread count, and batch size in
+stages, then saves the winning config to
+`~/.cache/qwen-coder-inference/benchmark-results.json`. On every subsequent
+`pixi shell` the activation script exports these as env vars
+(`LLAMA_N_GPU_LAYERS`, `LLAMA_N_THREADS`, `LLAMA_N_BATCH`) so all tools
+pick them up automatically.
+
+### Use
+
+```bash
+# Interactive chat (uses tuned settings automatically)
+pixi run chat
+
+# OpenAI-compatible API server
+pixi run serve
+# Then: curl http://localhost:8000/v1/chat/completions ...
+
+# Or use the env vars directly with any GGUF tool
+llama-cli -m $QWEN3_CODER_NEXT_MODEL_DIR/*.gguf \
+  -ngl $LLAMA_N_GPU_LAYERS -t $LLAMA_N_THREADS -b $LLAMA_N_BATCH \
+  -p "Hello"
+```
+
+### Pointing at a model
+
+The scripts look for a model in this order:
+1. `MODEL_PATH` env var (explicit path to a `.gguf` file)
+2. `QWEN3_CODER_NEXT_MODEL_DIR` / `QWEN35_35B_A3B_MODEL_DIR` env vars
+   (set automatically when a model conda package is installed)
+3. Fail with an error telling you what to set
+
 ## Project Structure
 
 ```
@@ -140,6 +199,14 @@ packaging-ai-models/
     qwen3-coder-next-gguf/
       recipe.yaml                        # Qwen3-Coder-Next recipe
       variants.yaml                      # Quantization variants (Q4_K_M default)
+  environments/
+    qwen-coder-inference/
+      pixi.toml                          # Inference env: llama.cpp + CUDA + auto-tune
+      benchmark.py                       # Sweeps settings, saves optimal config
+      scripts/
+        activate.sh                      # Loads tuned settings on shell activation
+        chat.py                          # Interactive chat using tuned settings
+        serve.py                         # OpenAI-compatible API server
   output/                                # Built .conda packages (gitignored)
 ```
 
