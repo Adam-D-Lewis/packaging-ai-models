@@ -208,6 +208,22 @@ The only requirement on the host is the NVIDIA driver (`nvidia-smi`).
 **Rule of thumb**: use llama.cpp for single-user inference, vLLM for multi-user
 serving where continuous batching matters.
 
+### Default model: Intel/Qwen3-Coder-Next-int4-AutoRound
+
+The default model is the [Intel INT4 AutoRound](https://huggingface.co/Intel/Qwen3-Coder-Next-int4-AutoRound)
+quantization of Qwen3-Coder-Next (~43.6 GB download, ~46 GB VRAM). This uses
+vLLM's optimized INT4 kernels — much better throughput than GGUF, which
+dequantizes weights every forward pass.
+
+| Attribute | Value |
+|-----------|-------|
+| Total parameters | 80B (3B active per token) |
+| Quantization | INT4 AutoRound (group_size=128, symmetric) |
+| Download size | ~43.6 GB |
+| Min VRAM | ~46 GB |
+| Format | safetensors (vLLM-native) |
+| Context | up to 256K tokens |
+
 ### Setup
 
 ```bash
@@ -215,36 +231,41 @@ cd environments/vllm-inference
 pixi install
 ```
 
-### Serve a model
+### Serve
 
 ```bash
-# Small model for testing (~1 GB download)
-MODEL=Qwen/Qwen2.5-0.5B-Instruct pixi run serve
+# Default: Intel INT4 Qwen3-Coder-Next with tool calling on 1 GPU
+pixi run serve
 
-# Qwen3-Coder-Next on 2x GPU with tool calling
-MODEL=Qwen/Qwen3-Coder-Next \
+# 2x GPU with tensor parallelism
+TENSOR_PARALLEL_SIZE=2 pixi run serve
+
+# Full 131K context on RunPod (2x RTX PRO 6000)
 TENSOR_PARALLEL_SIZE=2 \
 MAX_MODEL_LEN=131072 \
 GPU_MEMORY_UTILIZATION=0.95 \
-TOOL_CALL_PARSER=qwen3_coder \
 pixi run serve
 
-# GGUF model (experimental — see note below)
-MODEL="unsloth/Qwen3-0.6B-GGUF:Q4_K_M" \
-TOKENIZER=Qwen/Qwen3-0.6B \
-pixi run serve-gguf
+# qgpu2 staging (2x TITAN RTX 24 GB — tight fit)
+TENSOR_PARALLEL_SIZE=2 \
+MAX_MODEL_LEN=8192 \
+pixi run serve
+
+# Quick smoke test with a tiny model (~1 GB, no big GPU needed)
+MODEL=Qwen/Qwen2.5-0.5B-Instruct pixi run serve
 ```
 
 All coding agent frontends (Claude Code, Aider, etc.) connect to the
 OpenAI-compatible API at `http://host:8000/v1/chat/completions`.
 
-### GGUF vs AWQ/GPTQ in vLLM
+### GGUF vs INT4/AWQ/GPTQ in vLLM
 
 vLLM's GGUF support is marked "highly experimental and under-optimized." It
 reads GGUF files but dequantizes weights every forward pass via its own CUDA
-kernels — it does **not** use llama.cpp internally. For best vLLM throughput,
-prefer AWQ or GPTQ quantizations. GGUF is supported for convenience since it's
-the most common format on HuggingFace.
+kernels — it does **not** use llama.cpp internally. The Intel INT4 (default),
+AWQ, and GPTQ formats use optimized Marlin kernels and give significantly
+better throughput. GGUF is still available via `pixi run serve-gguf` for
+convenience.
 
 ### Test the server
 
