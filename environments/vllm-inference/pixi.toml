@@ -72,7 +72,8 @@ serve = "python scripts/serve.py"
 serve-gguf = "QUANTIZATION=gguf python scripts/serve.py"
 
 # Quick smoke test: start serving a tiny model (~1 GB download).
-test-serve = "MODEL=Qwen/Qwen2.5-0.5B-Instruct MAX_MODEL_LEN=2048 python scripts/serve.py"
+# Overrides default model, context, and disables the qwen3_coder tool parser.
+test-serve = { cmd = "python scripts/serve.py", env = { MODEL = "Qwen/Qwen2.5-0.5B-Instruct", MAX_MODEL_LEN = "2048", TOOL_CALL_PARSER = "", DTYPE = "auto" } }
 
 # Send a test chat completion to a running server.
 test-chat = "python scripts/test_chat.py"
