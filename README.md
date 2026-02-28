@@ -220,8 +220,10 @@ packaging-ai-models/
 
 ## Hosting a Custom Channel
 
-`rattler-build upload` supports 5 targets out of the box. The right choice
-depends on package size and who needs access.
+`rattler-build upload` supports 5 targets out of the box. There is also a newer
+`rattler-build publish` command that supports `s3://` and `file://` targets
+directly and auto-indexes after upload. The right choice depends on package size
+and who needs access.
 
 ### Option 1: Local file channel (quickest for demos)
 
@@ -260,14 +262,24 @@ rattler-build upload s3 \
   output/noarch/*.conda
 ```
 
-Then in `pixi.toml`, point at the HTTPS URL of the bucket:
+Then in `pixi.toml`, point at the bucket (pixi supports `s3://` natively, or
+use the HTTPS URL for public buckets):
 
 ```toml
-# Public S3 bucket
+# Native S3 URL (pixi handles auth via AWS env vars / config)
+channels = ["conda-forge", "s3://my-bucket/my-channel"]
+
+# Public bucket via HTTPS (no auth needed)
 channels = ["conda-forge", "https://my-bucket.s3.amazonaws.com/my-channel"]
 
-# MinIO / R2
-channels = ["conda-forge", "https://minio.example.com/models/conda-channel"]
+# MinIO / R2 — configure the endpoint in pixi
+channels = ["conda-forge", "s3://models/conda-channel"]
+
+# For non-AWS S3 providers, add endpoint config:
+# [workspace.s3-options.models]
+# endpoint-url = "https://minio.example.com"
+# region = "us-east-1"
+# force-path-style = true
 ```
 
 **Quick demo with MinIO** (runs locally in Docker, no AWS account needed):
@@ -297,8 +309,9 @@ rattler-build upload s3 \
 
 ### Option 3: prefix.dev (managed, easiest setup)
 
-Hosted by the rattler/pixi team. Free tier available, but has a **1 GB default
-package size limit** (contact them to raise it for large models).
+Hosted by the rattler/pixi team. Free tier available, but has a **100 MB default
+file size limit** (contact them to raise it for large models — not viable for
+multi-GB GGUF files without a custom arrangement).
 
 ```bash
 # Authenticate
@@ -325,9 +338,10 @@ rattler-build upload anaconda \
 # channels = ["conda-forge", "https://conda.anaconda.org/my-username"]
 ```
 
-### Option 5: Quetz (self-hosted, open source)
+### Option 5: Quetz (self-hosted, open source — unmaintained)
 
-A self-hosted conda channel server. Run it with Docker or install from conda-forge.
+A self-hosted conda channel server from the mamba-org team. **Note:** the last
+release was Dec 2023 and the project appears unmaintained. Use with caution.
 
 ```bash
 rattler-build upload quetz \
@@ -353,7 +367,7 @@ rattler-build upload artifactory \
 |--------|-----------|-------------|----------|
 | Local `file://` | Disk space | None | Local dev, demos |
 | S3 / MinIO / R2 | Unlimited | Low | Large models, teams |
-| prefix.dev | 1 GB default | None | Small packages, easy sharing |
+| prefix.dev | 100 MB default | None | Small packages, easy sharing |
 | Anaconda.org | Varies | None | Public distribution |
 | Quetz | Unlimited | Medium | Self-hosted, full control |
 | Artifactory | Unlimited | Medium | Enterprise |
