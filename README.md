@@ -185,6 +185,74 @@ The scripts look for a model in this order:
    (set automatically when a model conda package is installed)
 3. Fail with an error telling you what to set
 
+## vLLM Inference Environment (multi-user GPU serving)
+
+The `environments/vllm-inference/` directory is a standalone pixi project that
+replaces the `vllm/vllm-openai` Docker image with a pixi-managed environment.
+Everything the Docker image provides — CUDA, PyTorch, NCCL, vLLM — comes from
+conda-forge instead.
+
+The only requirement on the host is the NVIDIA driver (`nvidia-smi`).
+
+### Why vLLM instead of llama.cpp?
+
+| Feature | llama.cpp | vLLM |
+|---------|-----------|------|
+| Continuous batching | No (fixed batch) | Yes (dynamic scheduling) |
+| Multi-user throughput | Divides fixed throughput | Scales with concurrency |
+| Tensor parallelism | Manual layer splitting | `--tensor-parallel-size 2` |
+| Memory efficiency | Standard KV cache | PagedAttention (19-27% savings) |
+| GGUF performance | Native, highly optimized | Experimental, dequantizes each pass |
+| CPU offloading | Excellent | Not supported |
+
+**Rule of thumb**: use llama.cpp for single-user inference, vLLM for multi-user
+serving where continuous batching matters.
+
+### Setup
+
+```bash
+cd environments/vllm-inference
+pixi install
+```
+
+### Serve a model
+
+```bash
+# Small model for testing (~1 GB download)
+MODEL=Qwen/Qwen2.5-0.5B-Instruct pixi run serve
+
+# Qwen3-Coder-Next on 2x GPU with tool calling
+MODEL=Qwen/Qwen3-Coder-Next \
+TENSOR_PARALLEL_SIZE=2 \
+MAX_MODEL_LEN=131072 \
+GPU_MEMORY_UTILIZATION=0.95 \
+TOOL_CALL_PARSER=qwen3_coder \
+pixi run serve
+
+# GGUF model (experimental — see note below)
+MODEL="unsloth/Qwen3-0.6B-GGUF:Q4_K_M" \
+TOKENIZER=Qwen/Qwen3-0.6B \
+pixi run serve-gguf
+```
+
+All coding agent frontends (Claude Code, Aider, etc.) connect to the
+OpenAI-compatible API at `http://host:8000/v1/chat/completions`.
+
+### GGUF vs AWQ/GPTQ in vLLM
+
+vLLM's GGUF support is marked "highly experimental and under-optimized." It
+reads GGUF files but dequantizes weights every forward pass via its own CUDA
+kernels — it does **not** use llama.cpp internally. For best vLLM throughput,
+prefer AWQ or GPTQ quantizations. GGUF is supported for convenience since it's
+the most common format on HuggingFace.
+
+### Test the server
+
+```bash
+# In another terminal:
+pixi run test-chat
+```
+
 ## Project Structure
 
 ```
@@ -207,6 +275,11 @@ packaging-ai-models/
         activate.sh                      # Loads tuned settings on shell activation
         chat.py                          # Interactive chat using tuned settings
         serve.py                         # OpenAI-compatible API server
+    vllm-inference/
+      pixi.toml                          # vLLM env: replaces vllm/vllm-openai Docker
+      scripts/
+        serve.py                         # Starts vLLM OpenAI-compatible server
+        test_chat.py                     # Sends test request to running server
   output/                                # Built .conda packages (gitignored)
 ```
 
