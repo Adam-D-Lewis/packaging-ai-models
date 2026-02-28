@@ -7,8 +7,7 @@ whether you run it locally, on qgpu2, or on RunPod.
 Environment variables (all optional — sensible defaults are used):
 
     MODEL                   HuggingFace model ID, local path, or GGUF spec
-                            e.g. "unsloth/Qwen3-0.6B-GGUF:Q4_K_M"
-                            (default: Qwen/Qwen2.5-0.5B-Instruct)
+                            (default: Intel/Qwen3-Coder-Next-int4-AutoRound)
     QUANTIZATION            Quantization method: gguf, awq, gptq, or empty
                             for auto-detect (default: auto-detect)
     TOKENIZER               Explicit tokenizer. Required for GGUF models
@@ -19,8 +18,9 @@ Environment variables (all optional — sensible defaults are used):
     GPU_MEMORY_UTILIZATION  Fraction of GPU memory vLLM can use (default: 0.90)
     HOST                    Bind address (default: 0.0.0.0)
     PORT                    Bind port (default: 8000)
-    TOOL_CALL_PARSER        Tool call parser (default: none).
-                            Use "qwen3_coder" for Qwen3-Coder models.
+    TOOL_CALL_PARSER        Tool call parser (default: qwen3_coder).
+    DTYPE                   Data type for model weights (default: bfloat16)
+    TRUST_REMOTE_CODE       Set to "0" to disable (default: enabled)
     EXTRA_ARGS              Additional vLLM CLI arguments, space-separated
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ import sys
 
 
 def main() -> None:
-    model = os.environ.get("MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
+    model = os.environ.get("MODEL", "Intel/Qwen3-Coder-Next-int4-AutoRound")
     quantization = os.environ.get("QUANTIZATION", "")
     tokenizer = os.environ.get("TOKENIZER", "")
     max_model_len = os.environ.get("MAX_MODEL_LEN", "8192")
@@ -40,7 +40,9 @@ def main() -> None:
     gpu_mem = os.environ.get("GPU_MEMORY_UTILIZATION", "0.90")
     host = os.environ.get("HOST", "0.0.0.0")
     port = os.environ.get("PORT", "8000")
-    tool_parser = os.environ.get("TOOL_CALL_PARSER", "")
+    tool_parser = os.environ.get("TOOL_CALL_PARSER", "qwen3_coder")
+    dtype = os.environ.get("DTYPE", "bfloat16")
+    trust_remote = os.environ.get("TRUST_REMOTE_CODE", "1") != "0"
     extra = os.environ.get("EXTRA_ARGS", "")
 
     cmd = [
@@ -49,9 +51,13 @@ def main() -> None:
         "--max-model-len", max_model_len,
         "--tensor-parallel-size", tensor_parallel,
         "--gpu-memory-utilization", gpu_mem,
+        "--dtype", dtype,
         "--host", host,
         "--port", port,
     ]
+
+    if trust_remote:
+        cmd.append("--trust-remote-code")
 
     if quantization:
         cmd.extend(["--quantization", quantization])

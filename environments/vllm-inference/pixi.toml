@@ -39,46 +39,39 @@ vllm = ">=0.10"
 # Serve a model with the OpenAI-compatible API (the core use case).
 # All flags are configurable via environment variables — see serve.py.
 #
-# Quick start (small model, ~1 GB download):
-#   MODEL=Qwen/Qwen2.5-0.5B-Instruct pixi run serve
+# Default model: Intel INT4 AutoRound quantization of Qwen3-Coder-Next
+# (~43.6 GB download, ~46 GB VRAM). Uses optimized INT4 kernels in vLLM —
+# much better throughput than GGUF which dequantizes every forward pass.
 #
-# Qwen3-Coder-Next on qgpu2 (2x TITAN RTX, tensor parallel):
-#   MODEL=Qwen/Qwen3-Coder-Next \
-#   TENSOR_PARALLEL_SIZE=2 \
-#   MAX_MODEL_LEN=32768 \
+# Single GPU (RTX PRO 6000 96 GB — fits comfortably):
 #   pixi run serve
 #
-# Qwen3-Coder-Next on RunPod (2x RTX PRO 6000, full context):
-#   MODEL=Qwen/Qwen3-Coder-Next \
+# 2x GPU with tensor parallelism:
+#   TENSOR_PARALLEL_SIZE=2 pixi run serve
+#
+# Full 131K context on RunPod (2x RTX PRO 6000):
 #   TENSOR_PARALLEL_SIZE=2 \
 #   MAX_MODEL_LEN=131072 \
 #   GPU_MEMORY_UTILIZATION=0.95 \
 #   pixi run serve
+#
+# qgpu2 staging (2x TITAN RTX 24 GB = 48 GB total — tight fit):
+#   TENSOR_PARALLEL_SIZE=2 \
+#   MAX_MODEL_LEN=8192 \
+#   pixi run serve
 serve = "python scripts/serve.py"
 
-# Serve a GGUF model. vLLM supports two ways to specify GGUF models:
+# Serve a GGUF model instead. vLLM's GGUF support is experimental — it
+# dequantizes weights every forward pass via its own CUDA kernels (NOT
+# llama.cpp). For best vLLM throughput, use the default INT4 model above.
 #
-#   1. HuggingFace GGUF spec (preferred — vLLM downloads the right file):
-#      MODEL="unsloth/Qwen3-0.6B-GGUF:Q4_K_M" \
-#      TOKENIZER=Qwen/Qwen3-0.6B \
-#      pixi run serve-gguf
-#
-#   2. Local GGUF file path:
-#      MODEL=/path/to/model.gguf \
-#      TOKENIZER=Qwen/Qwen3-Coder-Next \
-#      pixi run serve-gguf
-#
-# Note: vLLM's GGUF support is experimental and under-optimized — it
-# dequantizes weights every forward pass via its own CUDA kernels (it does
-# NOT use llama.cpp internally). For best vLLM throughput, prefer AWQ/GPTQ
-# quantizations. GGUF is included here because it's the most common
-# quantization format on HuggingFace.
-#
-# Important: always set TOKENIZER to the base model (not the GGUF repo),
-# because vLLM's GGUF tokenizer extraction is unreliable.
+# Example:
+#   MODEL=/path/to/model.gguf \
+#   TOKENIZER=Qwen/Qwen3-Coder-Next \
+#   pixi run serve-gguf
 serve-gguf = "QUANTIZATION=gguf python scripts/serve.py"
 
-# Quick smoke test: start serving a tiny model (~1 GB).
+# Quick smoke test: start serving a tiny model (~1 GB download).
 test-serve = "MODEL=Qwen/Qwen2.5-0.5B-Instruct MAX_MODEL_LEN=2048 python scripts/serve.py"
 
 # Send a test chat completion to a running server.
