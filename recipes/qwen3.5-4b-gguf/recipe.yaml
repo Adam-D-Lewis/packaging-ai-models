@@ -1,0 +1,43 @@
+package:
+  name: qwen3.5-4b-gguf
+  version: "1.0.0"
+
+source:
+  url: https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-${{ quant_type }}.gguf?download=true
+  file_name: Qwen3.5-4B-${{ quant_type }}.gguf
+
+build:
+  noarch: generic
+  number: 0
+  string: ${{ quant_type | lower | replace('.', '_') | replace('-', '_') }}
+  script: |
+    # Create model directory
+    mkdir -p $PREFIX/share/qwen3.5-4b/models
+
+    # Move model file to package prefix
+    mv Qwen3.5-4B-${{ quant_type }}.gguf $PREFIX/share/qwen3.5-4b/models/
+
+    # Set environment variable pointing to the model directory
+    mkdir -p "${PREFIX}/etc/conda/env_vars.d"
+    echo "{\"QWEN35_4B_MODEL_DIR\": \"\$CONDA_PREFIX/share/qwen3.5-4b/models\"}" > "${PREFIX}/etc/conda/env_vars.d/${PKG_NAME}.json"
+
+tests:
+  - package_contents:
+      files:
+        exists:
+          - share/qwen3.5-4b/models/Qwen3.5-4B-${{ quant_type }}.gguf
+  - script: test "$QWEN35_4B_MODEL_DIR" = "$PREFIX/share/qwen3.5-4b/models"
+
+about:
+  homepage: https://huggingface.co/Qwen/Qwen3.5-4B
+  license: Apache-2.0
+  summary: >
+    Qwen3.5-4B GGUF model (${{ quant_type }} quantization).
+    4B parameters. Supports up to 262K context length.
+    Packaged from unsloth/Qwen3.5-4B-GGUF.
+  description: >
+    Qwen 3.5 integrates Gated Delta Networks with sparse Mixture-of-Experts (MoE).
+    Qwen3.5-4B is a compact dense model suitable for local development and testing.
+    This package contains the ${{ quant_type }} GGUF quantization from unsloth,
+    which uses Dynamic 2.0 for superior accuracy.
+  repository: https://huggingface.co/unsloth/Qwen3.5-4B-GGUF

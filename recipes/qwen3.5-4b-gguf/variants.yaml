@@ -1,0 +1,11 @@
+# Available quantization variants for Qwen3.5-4B GGUF
+# Sizes from unsloth/Qwen3.5-4B-GGUF:
+#   Q3_K_S:     ~2.11 GB
+#   Q3_K_M:     ~2.29 GB
+#   IQ4_XS:     ~2.48 GB
+#   IQ4_NL:     ~2.58 GB
+#   Q4_0:       ~2.58 GB  (default, good balance)
+#   UD-Q8_K_XL: ~5.95 GB  (highest quality)
+#   BF16:       ~8.42 GB  (unquantized)
+quant_type:
+  - Q4_0
