@@ -1,7 +1,7 @@
 [workspace]
 name = "llamacpp-inference"
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
 version = "0.1.0"
 
 # ---------------------------------------------------------------------------
@@ -48,6 +48,15 @@ huggingface_hub = ">=0.20"
 #   HF_FILE="*q4_k_m.gguf" \
 #   pixi run serve
 serve = "python scripts/serve.py"
+
+# Download Qwen3-4B Q4_K_M GGUF (~2.7 GB) to models/ directory.
+download-qwen3-4b = "python -c \"from huggingface_hub import hf_hub_download; hf_hub_download('unsloth/Qwen3-4B-GGUF', 'Qwen3-4B-Q4_K_M.gguf', local_dir='models')\""
+
+# Serve Qwen3-4B via OpenAI-compatible API.
+serve-qwen3-4b = { cmd = "python scripts/serve.py", depends-on = ["download-qwen3-4b"], env = { MODEL = "models/Qwen3-4B-Q4_K_M.gguf" } }
+
+# Interactive terminal chat with Qwen3-4B.
+chat-qwen3-4b = { cmd = "llama-cli -m models/Qwen3-4B-Q4_K_M.gguf -cnv -ngl -1", depends-on = ["download-qwen3-4b"] }
 
 # Quick smoke test: serve a tiny model (~400 MB download, runs on CPU).
 test-serve = { cmd = "python scripts/serve.py", env = { HF_REPO = "Qwen/Qwen2.5-0.5B-Instruct-GGUF", HF_FILE = "*q4_k_m.gguf", N_GPU_LAYERS = "0", MAX_MODEL_LEN = "2048" } }

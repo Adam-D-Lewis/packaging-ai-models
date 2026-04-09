@@ -9,6 +9,7 @@ Inspired by the [prefix.dev blog post](https://prefix.dev/blog/packaging-ai-ml-m
 | Recipe | Model | Quant | Size | Source |
 |--------|-------|-------|------|--------|
 | `whisper-tiny-test` | whisper.cpp tiny-en | q5_1 | ~31 MB | [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) |
+| `qwen3.5-4b-gguf` | Qwen3.5-4B | Q4_0 | ~2.58 GB | [unsloth/Qwen3.5-4B-GGUF](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) |
 | `qwen3.5-35b-a3b-gguf` | Qwen3.5-35B-A3B | Q4_K_M | ~21.2 GB | [unsloth/Qwen3.5-35B-A3B-GGUF](https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF) |
 | `qwen3-coder-next-gguf` | Qwen3-Coder-Next | Q4_K_M | ~48.5 GB | [unsloth/Qwen3-Coder-Next-GGUF](https://huggingface.co/unsloth/Qwen3-Coder-Next-GGUF) |
 
@@ -20,6 +21,9 @@ curl -fsSL https://pixi.sh/install.sh | bash
 
 # Build the small test model to validate the approach
 pixi run build-test
+
+# Build Qwen3.5-4B (Q4_0, ~2.58 GB download — good for local dev)
+pixi run build-qwen35-4b
 
 # Build Qwen3.5-35B-A3B (Q4_K_M, ~21.2 GB download)
 pixi run build-qwen35
